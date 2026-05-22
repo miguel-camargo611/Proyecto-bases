@@ -1,0 +1,70 @@
+{
+  "collection": "pokemon_jugador",
+  "database": "pokemon_go_nosql",
+  "description": "Pokémon individuales que posee cada jugador con su estado actual. Los stats evolucionan: cp_actual sube cada vez que el jugador potencia (candy + stardust). Esquema flexible: Pokémon sombra tienen 'es_sombra'+'purificado', Lucky tienen 'es_lucky'+'amigo_intercambio', formas regionales tienen 'forma'. El array historial_fortalecimiento crece indefinidamente — imposible en una tabla SQL sin explosión de filas.",
+  "why_mongodb": {
+    "flexible_schema": "Sombra, Lucky, Alola, Galar, Hisui — cada variante necesita campos distintos. SQL requeriría columnas NULL para todos los Pokémon normales.",
+    "embedded_arrays": "historial_fortalecimiento es un log de operaciones append-only. En SQL sería una tabla separada con JOIN obligatorio en cada lectura de la mochila.",
+    "high_read_volume": "Cada apertura de la mochila consulta TODOS los Pokémon del jugador. Con 100M jugadores, esto son miles de millones de lecturas/hora.",
+    "evolving_stats": "cp_actual cambia con cada potenciación. En SQL un UPDATE en tabla con 30B filas bajo carga masiva genera lock contention — MongoDB con sharding elimina ese bottleneck."
+  },
+  "integration_sql": {
+    "jugador_id": "JUGADOR.jugador_id (SQLite) — mismo valor",
+    "pokemon_id": "POKEMON.pokemon_id (SQLite) — especie base, stats de catálogo",
+    "captura_id": "CAPTURA.captura_id (SQLite) — evento de origen (null si es eclosión/intercambio)"
+  },
+  "sample_document_normal": {
+    "_id": "ObjectId generado automáticamente",
+    "jugador_id": 1,
+    "entrenador": "AshKetchum",
+    "equipo": "Mystic",
+    "pokemon_id": 25,
+    "nombre_especie": "Pikachu",
+    "apodo": null,
+    "cp_actual": 724,
+    "nivel": 28.5,
+    "iv_ataque": 14,
+    "iv_defensa": 12,
+    "iv_stamina": 15,
+    "iv_porcentaje": 91.1,
+    "movimiento_rapido": "Impactrueno",
+    "movimiento_cargado": "Rayo",
+    "es_favorito": false,
+    "es_lucky": false,
+    "es_sombra": false,
+    "forma": null,
+    "origen": "captura",
+    "captura_id": 42,
+    "fecha_obtencion": "ISODate('2024-01-15T00:00:00Z')",
+    "historial_fortalecimiento": [
+      {"fecha": "ISODate('2024-02-01')", "cp_antes": 650, "cp_despues": 680, "polvo_usado": 4000, "caramelos_usados": 2},
+      {"fecha": "ISODate('2024-03-10')", "cp_antes": 680, "cp_despues": 724, "polvo_usado": 5000, "caramelos_usados": 2}
+    ],
+    "ubicacion_captura": {"type": "Point", "coordinates": [-74.076, 4.5977]}
+  },
+  "sample_document_shadow": {
+    "pokemon_id": 6,
+    "nombre_especie": "Charizard",
+    "cp_actual": 2100,
+    "iv_porcentaje": 77.8,
+    "es_sombra": true,
+    "purificado": false,
+    "origen": "captura",
+    "historial_fortalecimiento": []
+  },
+  "sample_document_lucky": {
+    "pokemon_id": 149,
+    "nombre_especie": "Dragonite",
+    "es_lucky": true,
+    "amigo_intercambio": "BrockRock",
+    "origen": "intercambio",
+    "captura_id": null
+  },
+  "indexes": [
+    {"fields": {"jugador_id": 1, "cp_actual": -1}, "reason": "consulta principal de la mochila — todos los Pokémon del jugador ordenados por CP"},
+    {"fields": {"pokemon_id": 1}, "reason": "¿cuántos Charizard tiene la comunidad? análisis de popularidad de especie"},
+    {"fields": {"iv_porcentaje": -1}, "reason": "ranking de Pokémon más perfectos para análisis de balance"},
+    {"fields": {"es_lucky": 1}, "reason": "filtro de la mochila — ver solo Pokémon Lucky"},
+    {"fields": {"ubicacion_captura": "2dsphere"}, "reason": "análisis de zonas de captura — heatmap de dónde aparecen las especies"}
+  ]
+}

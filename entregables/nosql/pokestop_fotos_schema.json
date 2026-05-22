@@ -1,0 +1,65 @@
+{
+  "collection": "pokestop_fotos",
+  "database": "pokemon_go_nosql",
+  "description": "Fotos comunitarias de Poképaradas y Gimnasios enviadas por jugadores (modelo Niantic Wayfarer). Esquema flexible: campos opcionales como 'descripcion' solo aparecen en fotos panorámicas. Alto volumen de escritura durante Community Days (~50 fotos/min). Estado de moderación actualizado en tiempo real por votos.",
+  "why_mongodb": {
+    "flexible_schema": "Fotos de pokeparadas tienen campos distintos a fotos de gimnasios (equipo_control). Fotos panorámicas incluyen 'descripcion'; otras no.",
+    "high_write_volume": "Durante Community Days, miles de jugadores suben fotos simultáneamente — SQL con transacciones ACID no escala aquí.",
+    "geospatial": "Consulta '¿Qué Poképaradas sin foto aprobada están cerca de mí?' requiere 2dsphere."
+  },
+  "integration_sql": {
+    "lugar_id (tipo_lugar='pokeparada')": "POKEPARADA.pokeparada_id (SQLite)",
+    "lugar_id (tipo_lugar='gimnasio')": "GIMNASIO.gimnasio_id (SQLite)",
+    "contribuidor_jugador_id": "JUGADOR.jugador_id (SQLite)"
+  },
+  "sample_document": {
+    "_id": "ObjectId generado automáticamente",
+    "foto_id": "FOTO-000001",
+    "tipo_lugar": "pokeparada",
+    "lugar_id": 1,
+    "nombre_lugar": "Catedral Primada de Bogotá",
+    "barrio": "La Candelaria",
+    "foto_url": "https://storage.googleapis.com/niantic-wayfarer-photos/bogota/catedral-primada-001.jpg",
+    "contribuidor_jugador_id": 12,
+    "contribuidor_nombre": "AshKetchum",
+    "fecha_subida": "ISODate('2024-03-15T10:30:00Z')",
+    "votos_aprobacion": 47,
+    "votos_rechazo": 2,
+    "estado": "aprobada",
+    "etiquetas": ["dia", "frontal", "limpia"],
+    "resolucion": {"ancho_px": 1920, "alto_px": 1080},
+    "ubicacion": {
+      "type": "Point",
+      "coordinates": [-74.076, 4.5977]
+    }
+  },
+  "sample_document_gym": {
+    "foto_id": "FOTO-000072",
+    "tipo_lugar": "gimnasio",
+    "lugar_id": 3,
+    "nombre_lugar": "Parque Simón Bolívar — Explanada",
+    "barrio": "Salitre",
+    "foto_url": "https://storage.googleapis.com/niantic-wayfarer-photos/bogota/gym-parque-simon-bolivar-001.jpg",
+    "contribuidor_jugador_id": 7,
+    "contribuidor_nombre": "MistyWater",
+    "fecha_subida": "ISODate('2024-06-20T15:45:00Z')",
+    "votos_aprobacion": 83,
+    "votos_rechazo": 4,
+    "estado": "aprobada",
+    "etiquetas": ["dia", "panoramica", "entrada"],
+    "descripcion": "Vista panorámica de Parque Simón Bolívar — Explanada en Salitre",
+    "resolucion": {"ancho_px": 3024, "alto_px": 4032},
+    "ubicacion": {
+      "type": "Point",
+      "coordinates": [-74.0952, 4.6586]
+    },
+    "equipo_control": "Mystic"
+  },
+  "indexes": [
+    {"fields": {"lugar_id": 1, "tipo_lugar": 1}, "reason": "lookup directo de fotos de una parada o gimnasio específico"},
+    {"fields": {"estado": 1}, "reason": "cola de moderación — filtrar pendientes"},
+    {"fields": {"votos_aprobacion": -1}, "reason": "ranking de fotos más votadas para la pantalla de detalle"},
+    {"fields": {"ubicacion": "2dsphere"}, "reason": "fotos cerca de la ubicación actual del jugador"},
+    {"fields": {"etiquetas": 1}, "reason": "filtrar fotos por tipo (dia, frontal, panoramica)"}
+  ]
+}

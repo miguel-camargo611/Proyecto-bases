@@ -1,0 +1,50 @@
+{
+  "collection": "battle_logs",
+  "database": "pokemon_go_nosql",
+  "description": "Registro de batallas PvP en tiempo real. Alta frecuencia de escritura — durante la crisis de julio 2016 este tipo de datos llegaba a millones de eventos por minuto en los gimnasios de Pokémon GO.",
+  "integration_sql": {
+    "jugador_atacante_id": "JUGADOR.jugador_id (SQLite)",
+    "jugador_defensor_id": "JUGADOR.jugador_id (SQLite)",
+    "pokemon_atacante.pokemon_id": "POKEMON.pokemon_id (SQLite)",
+    "pokemon_defensor.pokemon_id": "POKEMON.pokemon_id (SQLite)",
+    "gimnasio.gimnasio_id": "GIMNASIO.gimnasio_id (SQLite)"
+  },
+  "sample_document": {
+    "_id": "ObjectId generado automáticamente",
+    "batalla_id": "BAT-20160716-00001",
+    "jugador_atacante_id": 1,
+    "jugador_defensor_id": 2,
+    "equipo_atacante": "Mystic",
+    "equipo_defensor": "Valor",
+    "pokemon_atacante": {
+      "pokemon_id": 248,
+      "nombre": "Tyranitar",
+      "cp": 3671,
+      "movimiento_cargado": "Triturar"
+    },
+    "pokemon_defensor": {
+      "pokemon_id": 143,
+      "nombre": "Snorlax",
+      "cp": 3112,
+      "movimiento_cargado": "Hiperrayo"
+    },
+    "gimnasio": {
+      "gimnasio_id": 1,
+      "nombre": "Plaza de Bolívar",
+      "equipo_control": "Valor"
+    },
+    "resultado": "victoria_atacante",
+    "dano_total": 1847,
+    "duracion_segundos": 67,
+    "timestamp": "ISODate('2024-03-15T14:30:00Z')",
+    "ubicacion": {
+      "type": "Point",
+      "coordinates": [-74.076, 4.5981]
+    }
+  },
+  "indexes": [
+    {"fields": {"jugador_atacante_id": 1, "timestamp": -1}, "reason": "historial de batallas por jugador"},
+    {"fields": {"timestamp": -1}, "reason": "ranking cronológico global"},
+    {"fields": {"ubicacion": "2dsphere"}, "reason": "búsqueda geoespacial de batallas cercanas"}
+  ]
+}

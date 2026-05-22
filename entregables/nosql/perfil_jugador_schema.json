@@ -1,0 +1,202 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "required": ["jugador_id", "nombre_entrenador", "equipo", "nivel", "batallas", "estadisticas", "ultima_actualizacion"],
+    "description": "Perfil completo del jugador con historial de batallas embebido. Un documento por jugador. El array 'batallas' crece con cada REGISTRO_BATALLA nuevo — este patrón de escritura constante justifica MongoDB sobre SQL para este estado.",
+    "properties": {
+      "_id": {
+        "bsonType": "objectId",
+        "description": "ObjectId generado por MongoDB"
+      },
+      "jugador_id": {
+        "bsonType": "int",
+        "description": "FK a JUGADOR.jugador_id en SQLite/Cloud Spanner — clave de integración entre ambos motores"
+      },
+      "nombre_entrenador": {
+        "bsonType": "string",
+        "description": "Nombre del entrenador (desnormalizado desde JUGADOR para evitar JOINs en lectura)"
+      },
+      "equipo": {
+        "bsonType": "string",
+        "enum": ["Mystic", "Valor", "Instinct"],
+        "description": "Equipo del entrenador — sincronizado desde EQUIPO.nombre en SQL"
+      },
+      "nivel": {
+        "bsonType": "int",
+        "minimum": 1,
+        "maximum": 50,
+        "description": "Nivel actual del entrenador (1–50 en Pokémon GO)"
+      },
+      "pais": {
+        "bsonType": "string",
+        "description": "Código ISO 3166-1 alpha-2 del país del jugador (ej: 'CO', 'US', 'MX')"
+      },
+      "fecha_registro": {
+        "bsonType": "string",
+        "description": "Fecha de registro en formato YYYY-MM-DD — sincronizado desde JUGADOR.fecha_registro"
+      },
+      "batallas": {
+        "bsonType": "array",
+        "description": "Historial completo de batallas del jugador embebido. Crece con cada nueva batalla registrada en REGISTRO_BATALLA. Justificación de MongoDB: un jugador activo agrega 5-20 batallas por día — leer el perfil completo sin JOINs justifica la desnormalización.",
+        "items": {
+          "bsonType": "object",
+          "required": ["batalla_id", "rol", "resultado", "dano_infligido", "fecha"],
+          "properties": {
+            "batalla_id": {
+              "bsonType": "int",
+              "description": "FK a REGISTRO_BATALLA.batalla_id en SQLite — permite reconciliación ACID"
+            },
+            "rol": {
+              "bsonType": "string",
+              "enum": ["atacante", "defensor"],
+              "description": "Rol del jugador en esta batalla"
+            },
+            "resultado": {
+              "bsonType": "string",
+              "enum": ["victoria", "derrota", "empate"],
+              "description": "Resultado desde la perspectiva de este jugador"
+            },
+            "pokemon_usado": {
+              "bsonType": "object",
+              "properties": {
+                "pokemon_id": {"bsonType": "int"},
+                "nombre": {"bsonType": "string"},
+                "cp": {"bsonType": "int"}
+              },
+              "description": "Pokémon con el que participó en la batalla"
+            },
+            "dano_infligido": {
+              "bsonType": "int",
+              "minimum": 0,
+              "description": "Daño total infligido en la batalla — siempre >= 0 (RN-010)"
+            },
+            "rival_id": {
+              "bsonType": "int",
+              "description": "jugador_id del rival — FK a JUGADOR en SQL (RN-009: siempre distinto al propio)"
+            },
+            "rival_nombre": {
+              "bsonType": "string",
+              "description": "Nombre del rival (desnormalizado para evitar lookup)"
+            },
+            "gimnasio": {
+              "bsonType": "string",
+              "description": "Nombre del gimnasio donde ocurrió la batalla"
+            },
+            "fecha": {
+              "bsonType": "date",
+              "description": "Timestamp UTC de la batalla"
+            }
+          }
+        }
+      },
+      "estadisticas": {
+        "bsonType": "object",
+        "description": "Métricas derivadas del array 'batallas' — se recalculan en cada upsert para lectura O(1)",
+        "required": ["total_batallas", "victorias", "derrotas", "tasa_victoria_pct", "dano_total_infligido"],
+        "properties": {
+          "total_batallas": {
+            "bsonType": "int",
+            "minimum": 0
+          },
+          "victorias": {
+            "bsonType": "int",
+            "minimum": 0
+          },
+          "derrotas": {
+            "bsonType": "int",
+            "minimum": 0
+          },
+          "empates": {
+            "bsonType": "int",
+            "minimum": 0
+          },
+          "tasa_victoria_pct": {
+            "bsonType": "double",
+            "minimum": 0.0,
+            "maximum": 100.0,
+            "description": "victorias / total_batallas * 100, redondeado a 1 decimal"
+          },
+          "dano_total_infligido": {
+            "bsonType": "int",
+            "minimum": 0
+          },
+          "dano_promedio_por_batalla": {
+            "bsonType": "double",
+            "minimum": 0.0
+          },
+          "pokemon_mas_usado": {
+            "bsonType": "string",
+            "description": "Nombre del Pokémon con más apariciones en 'batallas'"
+          }
+        }
+      },
+      "ultima_actualizacion": {
+        "bsonType": "date",
+        "description": "ISODate del último upsert — permite detectar perfiles desactualizados"
+      }
+    }
+  },
+  "_sample_document": {
+    "_id": {"$oid": "507f1f77bcf86cd799439011"},
+    "jugador_id": 5,
+    "nombre_entrenador": "AshKetchum",
+    "equipo": "Mystic",
+    "nivel": 30,
+    "pais": "CO",
+    "fecha_registro": "2022-07-06",
+    "batallas": [
+      {
+        "batalla_id": 1,
+        "rol": "atacante",
+        "resultado": "victoria",
+        "pokemon_usado": {
+          "pokemon_id": 6,
+          "nombre": "Charizard",
+          "cp": 3000
+        },
+        "dano_infligido": 342,
+        "rival_id": 8,
+        "rival_nombre": "MistyAqua",
+        "gimnasio": "Plaza de Bolivar",
+        "fecha": {"$date": "2024-03-15T20:00:00Z"}
+      },
+      {
+        "batalla_id": 7,
+        "rol": "defensor",
+        "resultado": "derrota",
+        "pokemon_usado": {
+          "pokemon_id": 25,
+          "nombre": "Pikachu",
+          "cp": 1200
+        },
+        "dano_infligido": 185,
+        "rival_id": 12,
+        "rival_nombre": "GaryOak",
+        "gimnasio": "Parque de la 93",
+        "fecha": {"$date": "2024-03-18T14:30:00Z"}
+      }
+    ],
+    "estadisticas": {
+      "total_batallas": 15,
+      "victorias": 10,
+      "derrotas": 4,
+      "empates": 1,
+      "tasa_victoria_pct": 66.7,
+      "dano_total_infligido": 4820,
+      "dano_promedio_por_batalla": 321.3,
+      "pokemon_mas_usado": "Charizard"
+    },
+    "ultima_actualizacion": {"$date": "2024-03-18T14:30:00Z"}
+  },
+  "_integration_sql": {
+    "jugador_id": "JUGADOR.jugador_id",
+    "nombre_entrenador": "JUGADOR.nombre_entrenador",
+    "equipo": "EQUIPO.nombre (via JUGADOR.equipo_id)",
+    "batallas[].batalla_id": "REGISTRO_BATALLA.batalla_id",
+    "batallas[].rol": "derivado: si jugador_id = REGISTRO_BATALLA.atacante_id entonces 'atacante'",
+    "batallas[].dano_infligido": "REGISTRO_BATALLA.dano_infligido",
+    "batallas[].rival_id": "REGISTRO_BATALLA.atacante_id o defensor_id (el que no sea este jugador)",
+    "batallas[].gimnasio": "GIMNASIO.nombre (via REGISTRO_BATALLA.gimnasio_id)",
+    "note": "REGISTRO_BATALLA en SQLite garantiza ACID e integridad referencial (RN-009, RN-010). perfil_jugador en MongoDB provee lectura O(1) del historial completo sin JOINs."
+  }
+}

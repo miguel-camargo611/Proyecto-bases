@@ -1,0 +1,39 @@
+{
+  "collection": "player_sessions",
+  "database": "pokemon_go_nosql",
+  "description": "Sesiones de juego con geolocalización y Poképaradas visitadas. Permite análisis de densidad de jugadores por región y optimización de eventos presenciales.",
+  "integration_sql": {
+    "jugador_id": "JUGADOR.jugador_id (SQLite)",
+    "pokeparadas_visitadas[].pokeparada_id": "POKEPARADA.pokeparada_id (SQLite)"
+  },
+  "sample_document": {
+    "_id": "ObjectId generado automáticamente",
+    "sesion_id": "SES-20240315-00042",
+    "jugador_id": 1,
+    "entrenador": "AshKetchum",
+    "equipo": "Mystic",
+    "nivel_jugador": 35,
+    "inicio": "ISODate('2024-03-15T09:00:00Z')",
+    "fin": "ISODate('2024-03-15T10:15:00Z')",
+    "duracion_minutos": 75,
+    "capturas_en_sesion": 12,
+    "km_caminados": 3.7,
+    "pokeparadas_visitadas": [
+      {"pokeparada_id": 1, "nombre": "Catedral Primada de Bogotá", "barrio": "La Candelaria"},
+      {"pokeparada_id": 2, "nombre": "Museo del Oro", "barrio": "Centro"}
+    ],
+    "ubicacion_inicio": {
+      "type": "Point",
+      "coordinates": [-74.0760, 4.5977]
+    },
+    "ciudad": "Bogotá",
+    "pais": "CO",
+    "version_app": "0.307.0"
+  },
+  "indexes": [
+    {"fields": {"jugador_id": 1, "inicio": -1}, "reason": "historial de sesiones por jugador"},
+    {"fields": {"pais": 1}, "reason": "análisis de actividad regional"},
+    {"fields": {"ubicacion_inicio": "2dsphere"}, "reason": "búsqueda de jugadores cercanos"},
+    {"fields": {"inicio": -1}, "reason": "sesiones más recientes primero"}
+  ]
+}
